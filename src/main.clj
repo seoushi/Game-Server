@@ -94,13 +94,19 @@
     (try
       (cond
         ; try to login
-        (= "login" func)  (let [result (apply login-user args)]
-                            (if (nil? result)
-                              (reply "Invalid credentials" user-data)
-                              (reply "Logged in" (assoc user-data :id result))))
+        (= "login" func)    (let [result (apply login-user args)]
+                              (if (nil? result)
+                                (reply "Invalid credentials" user-data)
+                                (reply "Logged in" (assoc user-data :id result))))
+        ;try to register a user
+        (= "register" func) (let [result (apply register-user args)]
+                              (if (nil? result)
+                                (reply "User already exists." user-data)
+                                (reply "Created new user"  user-data)))
         ; we have no idea what message they are trying to do
         :else             (reply "Invalid message" user-data))
-      (catch Exception e  (reply "Error while processing message" user-data)))))
+      (catch Exception e  (do (println e)
+                            (reply "Error while processing message" user-data))))))
 
 (defn server-loop
   "called when a new connection is added. It's the main loop for the connection"

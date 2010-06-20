@@ -1,0 +1,31 @@
+This is a sample game server using clojure
+
+
+Current features:
+
+Registering a new user
+user authentication
+
+
+
+Notes:
+
+Messages are seperated by colons. The format for messages is "function:arg1:arg2:...",
+where "function" is the name of the function you wish to call.
+
+
+
+Valid Messages:
+
+register - takes a user name and password	register:sean:password
+login - takes a user name and password		login:sean:password
+
+
+
+Known issues:
+
+The server is being tested using telnet, there is no client.
+The database is faked and not persistant.
+messages are in clear text and not optimized
+passwords are not encrypted
+All responses from the server are just plain text, it should have message id's
