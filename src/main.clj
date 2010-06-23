@@ -1,23 +1,13 @@
 (ns main
   (:use clojure.contrib.server-socket
-    clojure.contrib.str-utils))
+    clojure.contrib.str-utils
+    database))
 
 (import '[java.io BufferedReader InputStreamReader OutputStreamWriter])
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; fake database
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defstruct user :name :password)
-
-;; a fake list of users
-(def users (ref {1 (struct user "admin" "password")}))
-
-
-;; lookup table, user name -> user id
-(def user-lookup (ref {"admin"  1}))
-
-;; holds the last user id used
-(def last-user-id (ref 1))
 
 
 ;; definition of a session, right now it just contains an inbox for messages to process
@@ -35,15 +25,14 @@
 (defn login-user
   "takes in a user name string and trys to login the user. Returns the user's id or nil if the user could not be logged on"
   [user-name password]
-  (let [user-id       (@user-lookup user-name)                      ; get the user-id from the "database"
-        is-empty?     (empty? user-name)                           ; blanks user names are a source of trouble
-        is-logged-in  (contains? @sessions user-id)                ; check if the user is already logged in
-        user-data     (@users user-id)
-        correct-pass? (= (:password user-data) password)          ; check the password
-        valid-login     (not (or is-empty? is-logged-in (not correct-pass?)))]
+  (let [user          (with-db (find-user-with-name user-name)) ; get the user data from the "database"
+        is-empty?     (empty? user-name)                        ; blanks user names are a source of trouble
+        is-logged-in  (contains? @sessions (:id user))          ; check if the user is already logged in
+        correct-pass? (= (:password user) password)             ; check the password
+        valid-login   (not (or is-empty? is-logged-in (not correct-pass?)))]
     (if valid-login
-      (do (dosync (alter sessions assoc user-id (struct session '())))
-        user-id)
+      (do (dosync (alter sessions assoc (:id user) (struct session '())))
+        (:id user))
       nil)))
 
 
@@ -55,16 +44,14 @@
 
 
 (defn register-user
-  "creates a new user, returns the new user id or nil if the user exists"
+  "creates a new user, returns the true or false"
   [user-name password]
-  (let [user-id   (@user-lookup user-name)
+  (let [user      (with-db (find-user-with-name user-name))
         is-empty? (or (empty? user-name) (empty? password))]
-    (if (or user-id is-empty?)
-      nil
-      (do (dosync (alter user-lookup assoc user-name (inc @last-user-id))
-            (alter users assoc (inc @last-user-id) (struct user user-name password))
-            (alter last-user-id inc))
-        @last-user-id))))
+    (if (or user is-empty?)
+      false
+      (do (with-db (add-user user-name password))
+        true))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

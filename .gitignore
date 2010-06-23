@@ -1,3 +1,5 @@
 
 bin/main.clj
 classes/*
+bin/*
+server.db
